@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BlockVerify — File Integrity System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #09090E;
+      --surface: #12121A;
+      --surface2: #1A1A26;
+      --border: rgba(124,107,255,.15);
+      --border2: rgba(124,107,255,.3);
+      --accent: #7C6BFF;
+      --accent2: #AFA9EC;
+      --accent-dim: rgba(124,107,255,.12);
+      --text: #E8E6FF;
+      --text2: #8A87B0;
+      --text3: #4A476A;
+      --green: #22D67A;
+      --green-dim: rgba(34,214,122,.12);
+      --red: #FF4E6A;
+      --red-dim: rgba(255,78,106,.12);
+      --amber: #FFB547;
+      --amber-dim: rgba(255,181,71,.12);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font: 'Space Grotesk', sans-serif;
+      --mono: 'DM Mono', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; }
+
+    /* ── Layout ── */
+    .layout { display: flex; height: 100vh; overflow: hidden; }
+    .sidebar {
+      width: 230px; flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; padding: 0;
+      overflow-y: auto;
+    }
+    .main { flex: 1; overflow-y: auto; padding: 28px 32px; }
+
+    /* ── Sidebar ── */
+    .logo {
+      padding: 22px 20px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo-mark {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 15px; font-weight: 600; color: var(--text);
+    }
+    .logo-icon {
+      width: 30px; height: 30px; border-radius: 8px;
+      background: linear-gradient(135deg, #7C6BFF, #AFA9EC);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .logo-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+
+    .nav { padding: 12px 8px; flex: 1; }
+    .nav-group-label {
+      font-size: 10px; font-weight: 600; letter-spacing: .1em;
+      color: var(--text3); padding: 8px 12px 4px; text-transform: uppercase;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: var(--radius-sm);
+      cursor: pointer; color: var(--text2); font-size: 13px;
+      transition: all .15s; margin-bottom: 2px; border: none;
+      background: none; width: 100%; text-align: left; font-family: var(--font);
+    }
+    .nav-item:hover { background: var(--accent-dim); color: var(--text); }
+    .nav-item.active { background: var(--accent-dim); color: var(--accent2); }
+    .nav-item .ico { width: 16px; height: 16px; opacity: .7; flex-shrink: 0; }
+    .nav-item.active .ico { opacity: 1; }
+    .badge-count {
+      margin-left: auto; font-size: 10px; font-weight: 600;
+      background: var(--red); color: #fff;
+      width: 18px; height: 18px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .chain-status {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+      font-size: 11px; color: var(--text3);
+    }
+    .chain-dot {
+      display: inline-block; width: 7px; height: 7px;
+      border-radius: 50%; background: var(--green);
+      margin-right: 5px; animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* ── Page sections ── */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .page-header { margin-bottom: 24px; }
+    .page-title { font-size: 20px; font-weight: 600; }
+    .page-sub { font-size: 13px; color: var(--text2); margin-top: 4px; }
+
+    /* ── Metric cards ── */
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+    .metric-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px;
+    }
+    .metric-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+    .metric-value { font-size: 28px; font-weight: 600; }
+    .metric-sub { font-size: 11px; color: var(--text2); margin-top: 4px; }
+    .metric-card.good .metric-value { color: var(--green); }
+    .metric-card.bad  .metric-value { color: var(--red); }
+    .metric-card.warn .metric-value { color: var(--amber); }
+    .metric-card.accent .metric-value { color: var(--accent2); }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px; margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 13px; font-weight: 600; color: var(--text);
+      margin-bottom: 16px; display: flex; align-items: center;
+      justify-content: space-between;
+    }
+    .card-title span { color: var(--text2); font-weight: 400; font-size: 12px; }
+
+    /* ── Tables ── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      text-align: left; padding: 0 14px 10px;
+      font-size: 10px; font-weight: 600; letter-spacing: .07em;
+      color: var(--text3); text-transform: uppercase;
+    }
+    td { padding: 12px 14px; border-top: 1px solid var(--border); color: var(--text2); }
+    tr:hover td { background: var(--accent-dim); cursor: pointer; }
+    td.filename { color: var(--text); font-weight: 500; }
+    td.mono { font-family: var(--mono); font-size: 11px; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 600; padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .badge.safe    { background: var(--green-dim); color: var(--green); }
+    .badge.tampered{ background: var(--red-dim);   color: var(--red); }
+    .badge.pending { background: var(--amber-dim); color: var(--amber); }
+    .badge::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
+
+    /* ── Upload zone ── */
+    .upload-zone {
+      border: 2px dashed var(--border2);
+      border-radius: var(--radius);
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .2s;
+      margin-bottom: 20px;
+    }
+    .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: var(--accent-dim); }
+    .upload-zone input { display: none; }
+    .upload-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      background: var(--accent-dim); border: 1px solid var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 14px;
+    }
+    .upload-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .upload-sub { font-size: 12px; color: var(--text2); }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      font-size: 13px; font-weight: 500; padding: 9px 18px;
+      border-radius: var(--radius-sm); cursor: pointer;
+      border: none; font-family: var(--font); transition: all .15s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #9D8FFF; }
+    .btn-outline {
+      background: transparent; color: var(--text2);
+      border: 1px solid var(--border2);
+    }
+    .btn-outline:hover { background: var(--accent-dim); color: var(--text); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* ── File preview ── */
+    .file-preview {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px;
+      display: flex; align-items: center; gap: 14px;
+      margin-bottom: 16px;
+    }
+    .file-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: var(--accent-dim); border: 1px solid var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .file-name { font-weight: 600; font-size: 14px; margin-bottom: 3px; }
+    .file-meta { font-size: 11px; color: var(--text2); }
+
+    /* ── Hash display ── */
+    .hash-display {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px 14px;
+      font-family: var(--mono); font-size: 11px; color: var(--accent2);
+      word-break: break-all; margin-top: 8px;
+    }
+
+    /* ── Result banner ── */
+    .result-banner {
+      border-radius: var(--radius); padding: 20px 22px;
+      display: flex; align-items: center; gap: 16px;
+      margin-bottom: 20px;
+    }
+    .result-banner.safe    { background: var(--green-dim); border: 1px solid rgba(34,214,122,.3); }
+    .result-banner.tampered{ background: var(--red-dim);   border: 1px solid rgba(255,78,106,.3); }
+    .result-icon { font-size: 28px; }
+    .result-title { font-size: 16px; font-weight: 600; }
+    .result-sub   { font-size: 12px; color: var(--text2); margin-top: 3px; }
+
+    /* ── Merkle tree vis ── */
+    .merkle-vis { overflow-x: auto; }
+    .merkle-level { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; }
+    .merkle-node {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 6px 10px;
+      font-family: var(--mono); font-size: 10px; color: var(--accent2);
+      max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .merkle-node.root { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .merkle-node.leaf { border-color: var(--border2); }
+
+    /* ── Alert rows ── */
+    .alert-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 14px 0; border-bottom: 1px solid var(--border);
+    }
+    .alert-item:last-child { border-bottom: none; }
+    .alert-severity {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
+    }
+    .alert-severity.CRITICAL { background: var(--red-dim); color: var(--red); }
+    .alert-severity.HIGH     { background: var(--red-dim); color: var(--red); }
+    .alert-severity.MEDIUM   { background: var(--amber-dim); color: var(--amber); }
+    .alert-severity.LOW      { background: var(--accent-dim); color: var(--accent2); }
+    .alert-msg { font-size: 13px; color: var(--text); font-weight: 500; margin-bottom: 3px; }
+    .alert-meta { font-size: 11px; color: var(--text2); }
+    .alert-time { margin-left: auto; font-size: 11px; color: var(--text3); flex-shrink: 0; }
+
+    /* ── Blockchain blocks ── */
+    .chain-blocks { display: flex; align-items: center; gap: 0; overflow-x: auto; padding-bottom: 8px; }
+    .chain-block {
+      flex-shrink: 0;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 14px; min-width: 120px;
+    }
+    .chain-block.latest { border-color: var(--accent); background: var(--accent-dim); }
+    .chain-block-num { font-size: 11px; font-weight: 600; color: var(--accent2); margin-bottom: 4px; }
+    .chain-block-hash { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+    .chain-arrow { padding: 0 6px; color: var(--text3); flex-shrink: 0; }
+
+    /* ── Form fields ── */
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
+    select, input[type=text], input[type=number] {
+      width: 100%; padding: 9px 12px;
+      background: var(--surface2); border: 1px solid var(--border2);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-family: var(--font); font-size: 13px;
+    }
+    select:focus, input:focus { outline: none; border-color: var(--accent); }
+
+    /* ── Loader ── */
+    .spinner {
+      width: 18px; height: 18px; border: 2px solid var(--border2);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin .7s linear infinite; flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 28px; right: 28px;
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: var(--radius); padding: 14px 18px;
+      font-size: 13px; color: var(--text);
+      box-shadow: 0 8px 32px rgba(0,0,0,.5);
+      transition: all .25s; opacity: 0; transform: translateY(12px);
+      z-index: 9999; max-width: 320px;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    #toast.success { border-color: rgba(34,214,122,.4); }
+    #toast.error   { border-color: rgba(255,78,106,.4); }
+
+    /* ── Two col ── */
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+    @media (max-width: 900px) {
+      .metrics { grid-template-columns: repeat(2,1fr); }
+      .grid2 { grid-template-columns: 1fr; }
+      .sidebar { width: 200px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">
+        <div class="logo-icon">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24">
+            <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        BlockVerify
+      </div>
+      <div class="logo-sub">File Integrity System</div>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-group-label">Main</div>
+      <button class="nav-item active" onclick="showPage('dashboard')">
+        <svg class="ico" fill="none" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.5"/></svg>
+        Dashboard
+      </button>
+      <button class="nav-item" onclick="showPage('upload')">
+        <svg class="ico" fill="none" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Upload File
+      </button>
+      <button class="nav-item" onclick="showPage('verify')">
+        <svg class="ico" fill="none" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Verify File
+      </button>
+
+      <div class="nav-group-label" style="margin-top:10px">Monitoring</div>
+      <button class="nav-item" onclick="showPage('files')">
+        <svg class="ico" fill="none" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" stroke-width="1.5"/><path d="M14 2v6h6" stroke="currentColor" stroke-width="1.5"/></svg>
+        File Records
+      </button>
+      <button class="nav-item" onclick="showPage('blockchain')">
+        <svg class="ico" fill="none" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        Blockchain
+      </button>
+      <button class="nav-item" onclick="showPage('ai')">
+        <svg class="ico" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        AI Monitor
+      </button>
+      <button class="nav-item" onclick="showPage('alerts')" id="alertsNav">
+        <svg class="ico" fill="none" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Alerts
+        <span class="badge-count" id="alertBadge" style="display:none">0</span>
+      </button>
+
+      <div class="nav-group-label" style="margin-top:10px">Tools</div>
+      <button class="nav-item" onclick="showPage('merkle')">
+        <svg class="ico" fill="none" viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Merkle Tree
+      </button>
+
+      <div class="nav-group-label" style="margin-top:10px">System</div>
+      <a class="nav-item" href="/admin_choice" style="text-decoration:none; display:flex">
+        <svg class="ico" fill="none" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        Admin Portal
+      </a>
+      <a class="nav-item" href="/logout" style="text-decoration:none; display:flex; color:var(--red);">
+        <svg class="ico" fill="none" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Logout
+      </a>
+    </nav>
+
+    <div class="chain-status" id="chainStatus">
+      <span class="chain-dot"></span>
+      Connecting...
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <main class="main">
+
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub">System overview and recent activity</div>
+      </div>
+      <div class="metrics">
+        <div class="metric-card accent">
+          <div class="metric-label">Files Monitored</div>
+          <div class="metric-value" id="m-total">—</div>
+          <div class="metric-sub">Total registered</div>
+        </div>
+        <div class="metric-card good">
+          <div class="metric-label">Safe Files</div>
+          <div class="metric-value" id="m-safe">—</div>
+          <div class="metric-sub">Integrity intact</div>
+        </div>
+        <div class="metric-card bad">
+          <div class="metric-label">Tampered</div>
+          <div class="metric-value" id="m-tampered">—</div>
+          <div class="metric-sub">Requires review</div>
+        </div>
+        <div class="metric-card warn">
+          <div class="metric-label">Verifications</div>
+          <div class="metric-value" id="m-verif">—</div>
+          <div class="metric-sub">Total checks run</div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title">Recent Files <span id="dash-file-count"></span></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Name</th><th>Status</th><th>Uploaded</th></tr></thead>
+              <tbody id="dash-files"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Recent Alerts</div>
+          <div id="dash-alerts"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload -->
+    <div class="page" id="page-upload">
+      <div class="page-header">
+        <div class="page-title">Upload File</div>
+        <div class="page-sub">Register a file on the blockchain for future verification</div>
+      </div>
+      <div class="card">
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label>Alert Tracking Email (Optional)</label>
+          <input type="text" id="uploadEmail" placeholder="your@email.com" style="width: 100%; padding: 9px 12px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text);">
+        </div>
+        <div class="form-group" style="margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" id="uploadAutoCorrect" style="width: 16px; height: 16px; accent-color: var(--primary);">
+          <label for="uploadAutoCorrect" style="margin-bottom: 0; cursor: pointer;">Enable Auto-Correction if files are tampered</label>
+        </div>
+        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+          <input type="file" id="fileInput" onchange="onFileSelected(this)">
+          <div class="upload-icon">
+            <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="#7C6BFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="upload-title">Drop file here or click to browse</div>
+          <div class="upload-sub">Any file type · Max 50 MB</div>
+        </div>
+
+        <div id="uploadPreview" style="display:none">
+          <div class="file-preview">
+            <div class="file-icon">
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="#7C6BFF" stroke-width="1.5"/><path d="M14 2v6h6" stroke="#7C6BFF" stroke-width="1.5"/></svg>
+            </div>
+            <div>
+              <div class="file-name" id="prevName"></div>
+              <div class="file-meta" id="prevMeta"></div>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="doUpload()" id="uploadBtn">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Register on Blockchain
+          </button>
+        </div>
+      </div>
+
+      <div id="uploadResult" style="display:none">
+        <div class="result-banner safe">
+          <div class="result-icon">✅</div>
+          <div>
+            <div class="result-title">File registered successfully</div>
+            <div class="result-sub" id="uploadResultSub"></div>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="card">
+            <div class="card-title">SHA-256 Hash</div>
+            <div class="hash-display" id="uploadHash"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Merkle Root</div>
+            <div class="hash-display" id="uploadMerkle"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Blockchain Record</div>
+          <div id="uploadChainInfo"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Verify -->
+    <div class="page" id="page-verify">
+      <div class="page-header">
+        <div class="page-title">Verify File</div>
+        <div class="page-sub">Re-upload a file to check it against the blockchain record</div>
+      </div>
+      <div class="card">
+        <div class="form-group">
+          <label>Select File Record (by ID)</label>
+          <select id="verifySelect">
+            <option value="">— choose a registered file —</option>
+          </select>
+        </div>
+        <div class="upload-zone" id="verifyZone" onclick="document.getElementById('verifyInput').click()">
+          <input type="file" id="verifyInput" onchange="onVerifyFile(this)">
+          <div class="upload-icon">
+            <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#7C6BFF" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="upload-title">Drop file to verify</div>
+          <div class="upload-sub">Select the original (or modified) version of the file</div>
+        </div>
+        <div id="verifyFilePreview" style="display:none">
+          <div class="file-preview">
+            <div class="file-icon">
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="#7C6BFF" stroke-width="1.5"/></svg>
+            </div>
+            <div>
+              <div class="file-name" id="verifyPrevName"></div>
+              <div class="file-meta" id="verifyPrevMeta"></div>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="doVerify()" id="verifyBtn">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Verify Integrity
+          </button>
+        </div>
+      </div>
+      <div id="verifyResult" style="display:none"></div>
+    </div>
+
+    <!-- Files -->
+    <div class="page" id="page-files">
+      <div class="page-header">
+        <div class="page-title">File Records</div>
+        <div class="page-sub">All registered files and their integrity status</div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th><th>File Name</th><th>Hash</th>
+                <th>Merkle Root</th><th>Uploaded</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="filesTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Blockchain -->
+    <div class="page" id="page-blockchain">
+      <div class="page-header">
+        <div class="page-title">Blockchain Ledger</div>
+        <div class="page-sub">Immutable on-chain records and transaction history</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Chain Status</div>
+        <div id="bcStatusInfo" style="font-size:13px;color:var(--text2)">Loading...</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Recent Blocks</div>
+        <div class="chain-blocks" id="chainBlocks"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Verification History</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>File ID</th><th>File Name</th><th>Hash Checked</th><th>Result</th><th>When</th></tr></thead>
+            <tbody id="verifTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Monitor -->
+    <div class="page" id="page-ai">
+      <div class="page-header">
+        <div class="page-title">AI Monitor</div>
+        <div class="page-sub">Anomaly detection and behavioral analysis</div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title">Detection Rules Active</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--surface2);border-radius:var(--radius-sm)">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div>
+              <div>
+                <div style="font-size:13px;font-weight:500">High-frequency writes</div>
+                <div style="font-size:11px;color:var(--text2)">Flags ≥10 changes/hour per file</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--surface2);border-radius:var(--radius-sm)">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div>
+              <div>
+                <div style="font-size:13px;font-weight:500">Off-hours access</div>
+                <div style="font-size:11px;color:var(--text2)">Flags activity outside 08:00–20:00 UTC</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--surface2);border-radius:var(--radius-sm)">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div>
+              <div>
+                <div style="font-size:13px;font-weight:500">Repeated failures</div>
+                <div style="font-size:11px;color:var(--text2)">Flags ≥3 failed verifications in 2 hours</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">AI Stats</div>
+          <div id="aiStats" style="font-size:13px;color:var(--text2)">Loading...</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Detected Anomalies</div>
+        <div id="anomalyList"></div>
+      </div>
+    </div>
+
+    <!-- Alerts -->
+    <div class="page" id="page-alerts">
+      <div class="page-header">
+        <div class="page-title">Alerts</div>
+        <div class="page-sub">System notifications and security warnings</div>
+      </div>
+      <div style="margin-bottom:16px">
+        <button class="btn btn-outline" onclick="markAlertsRead()">Mark all read</button>
+      </div>
+      <div class="card" id="alertsList"></div>
+    </div>
+
+    <!-- Merkle Tool -->
+    <div class="page" id="page-merkle">
+      <div class="page-header">
+        <div class="page-title">Merkle Tree Demo</div>
+        <div class="page-sub">Visualize how file hashes combine into a Merkle root</div>
+      </div>
+      <div class="card">
+        <div class="form-group">
+          <label>Enter items (one per line)</label>
+          <textarea id="merkleInput"
+            style="width:100%;min-height:100px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-family:var(--mono);font-size:12px;padding:10px;resize:vertical"
+            placeholder="file1.pdf&#10;report.docx&#10;data.csv&#10;backup.zip">file1.pdf
+report.docx
+data.csv
+backup.zip</textarea>
+        </div>
+        <button class="btn btn-primary" onclick="buildMerkle()">Build Merkle Tree</button>
+      </div>
+      <div id="merkleResult" style="display:none">
+        <div class="card">
+          <div class="card-title">Merkle Root</div>
+          <div class="hash-display" id="merkleRoot"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Tree Structure (bottom → root)</div>
+          <div class="merkle-vis" id="merkleTree"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Proof for first leaf</div>
+          <div id="merkleProof"></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = '';  // same origin — Flask serves both
+
+// ── Navigation ──
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (name === 'dashboard') loadDashboard();
+  if (name === 'files')     loadFiles();
+  if (name === 'blockchain') loadBlockchain();
+  if (name === 'ai')        loadAI();
+  if (name === 'alerts')    loadAlerts();
+  if (name === 'verify')    loadVerifySelect();
+}
+
+// ── Toast ──
+function toast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show ' + type;
+  setTimeout(() => t.className = '', 3000);
+}
+
+// ── Helpers ──
+function fmtSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+function fmtDate(s) {
+  if (!s) return '—';
+  const d = new Date(s.endsWith('Z') ? s : s + 'Z');
+  return d.toLocaleString();
+}
+function shortHash(h) { return h ? h.slice(0,8)+'…'+h.slice(-6) : '—'; }
+
+// ── Dashboard ──
+async function loadDashboard() {
+  try {
+    const [stats, files, alerts] = await Promise.all([
+      fetch(API+'/api/stats').then(r=>r.json()),
+      fetch(API+'/api/files').then(r=>r.json()),
+      fetch(API+'/api/alerts').then(r=>r.json())
+    ]);
+    document.getElementById('m-total').textContent    = stats.total_files   ?? 0;
+    document.getElementById('m-safe').textContent     = stats.safe_files    ?? 0;
+    document.getElementById('m-tampered').textContent = stats.tampered_files ?? 0;
+    document.getElementById('m-verif').textContent    = stats.verifications  ?? 0;
+
+    // Files table
+    const tbody = document.getElementById('dash-files');
+    tbody.innerHTML = files.slice(0,8).map(f => `
+      <tr onclick="showPage('files')">
+        <td class="filename">${f.file_name}</td>
+        <td><span class="badge ${f.status}">${f.status}</span></td>
+        <td>${fmtDate(f.uploaded_at).split(',')[0]}</td>
+      </tr>`).join('') || '<tr><td colspan="3" style="color:var(--text3);text-align:center;padding:20px">No files yet</td></tr>';
+
+    // Alerts
+    const alertDiv = document.getElementById('dash-alerts');
+    alertDiv.innerHTML = alerts.slice(0,5).map(a => `
+      <div class="alert-item">
+        <div class="alert-severity ${a.severity}">${severityIcon(a.severity)}</div>
+        <div style="flex:1"><div class="alert-msg">${a.message}</div>
+        <div class="alert-meta">${a.type} · ${fmtDate(a.timestamp)}</div></div>
+      </div>`).join('') || '<div style="color:var(--text3);font-size:13px;padding:8px 0">No alerts</div>';
+  } catch(e) { console.error(e); }
+}
+
+// ── Chain status ──
+async function loadChainStatus() {
+  try {
+    const data = await fetch(API+'/api/health').then(r=>r.json());
+    const bc = data.blockchain;
+    const el = document.getElementById('chainStatus');
+    if (bc.mode === 'mock') {
+      el.innerHTML = `<span class="chain-dot"></span> Mock mode (no Ganache)`;
+    } else {
+      el.innerHTML = `<span class="chain-dot"></span> Ganache · Block #${bc.block}`;
+    }
+  } catch(e) {}
+}
+
+// ── Upload ──
+let selectedFile = null;
+function onFileSelected(input) {
+  selectedFile = input.files[0];
+  if (!selectedFile) return;
+  document.getElementById('prevName').textContent = selectedFile.name;
+  document.getElementById('prevMeta').textContent = fmtSize(selectedFile.size) + ' · ' + (selectedFile.type || 'unknown');
+  document.getElementById('uploadPreview').style.display = 'block';
+  document.getElementById('uploadResult').style.display = 'none';
+}
+
+async function doUpload() {
+  if (!selectedFile) return;
+  const btn = document.getElementById('uploadBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Registering…';
+  try {
+    const fd = new FormData();
+    fd.append('file', selectedFile);
+    fd.append('email', document.getElementById('uploadEmail').value);
+    fd.append('auto_correct', document.getElementById('uploadAutoCorrect').checked);
+    const res = await fetch(API+'/api/upload', {method:'POST', body:fd});
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Upload failed');
+
+    document.getElementById('uploadResult').style.display = 'block';
+    document.getElementById('uploadResultSub').textContent =
+      `File ID: #${data.file_id} · Tx: ${shortHash(data.blockchain?.tx_hash)}`;
+    document.getElementById('uploadHash').textContent   = data.file_hash;
+    document.getElementById('uploadMerkle').textContent = data.merkle_root;
+    document.getElementById('uploadChainInfo').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px">
+        <div><div style="color:var(--text3);font-size:11px;margin-bottom:4px">CHAIN MODE</div>${data.blockchain?.mode ?? '—'}</div>
+        <div><div style="color:var(--text3);font-size:11px;margin-bottom:4px">FILE ID</div>#${data.file_id}</div>
+        <div style="grid-column:1/-1"><div style="color:var(--text3);font-size:11px;margin-bottom:4px">TX HASH</div>
+        <div class="hash-display">${data.blockchain?.tx_hash ?? '—'}</div></div>
+      </div>`;
+    toast('File registered on blockchain!');
+    if (data.anomalies?.length) toast('AI alert: ' + data.anomalies[0].message, 'error');
+  } catch(e) {
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Register on Blockchain';
+  }
+}
+
+// ── Verify ──
+let verifyFile = null;
+async function loadVerifySelect() {
+  const files = await fetch(API+'/api/files').then(r=>r.json());
+  const sel = document.getElementById('verifySelect');
+  sel.innerHTML = '<option value="">— choose a registered file —</option>' +
+    files.map(f => `<option value="${f.id}">#${f.id} — ${f.file_name} (${f.status})</option>`).join('');
+}
+
+function onVerifyFile(input) {
+  verifyFile = input.files[0];
+  if (!verifyFile) return;
+  document.getElementById('verifyPrevName').textContent = verifyFile.name;
+  document.getElementById('verifyPrevMeta').textContent = fmtSize(verifyFile.size);
+  document.getElementById('verifyFilePreview').style.display = 'block';
+  document.getElementById('verifyResult').style.display = 'none';
+}
+
+async function doVerify() {
+  const fileId = document.getElementById('verifySelect').value;
+  if (!fileId) { toast('Please select a file record', 'error'); return; }
+  if (!verifyFile) { toast('Please select a file to verify', 'error'); return; }
+  const btn = document.getElementById('verifyBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Verifying…';
+  try {
+    const fd = new FormData();
+    fd.append('file', verifyFile);
+    fd.append('file_id', fileId);
+    const res = await fetch(API+'/api/verify', {method:'POST', body:fd});
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Verification failed');
+
+    const intact = data.is_intact;
+    const resDiv = document.getElementById('verifyResult');
+    resDiv.style.display = 'block';
+    resDiv.innerHTML = `
+      <div class="result-banner ${intact ? 'safe' : 'tampered'}">
+        <div class="result-icon">${intact ? '✅' : '🚨'}</div>
+        <div>
+          <div class="result-title">${intact ? 'File integrity verified — SAFE' : 'TAMPER DETECTED — File modified!'}</div>
+          <div class="result-sub">File: ${data.file_name} · ID: #${data.file_id}</div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="card"><div class="card-title">Original Hash (Blockchain)</div><div class="hash-display">${data.original_hash}</div></div>
+        <div class="card"><div class="card-title">Current Hash (Computed)</div><div class="hash-display" style="color:${intact?'var(--green)':'var(--red)'}">${data.new_hash}</div></div>
+      </div>`;
+    toast(intact ? 'File is intact!' : 'TAMPER DETECTED!', intact ? 'success' : 'error');
+    if (data.anomalies?.length) toast('AI: ' + data.anomalies[0].message, 'error');
+  } catch(e) { toast(e.message, 'error'); }
+  finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Verify Integrity';
+  }
+}
+
+// ── Files list ──
+async function loadFiles() {
+  const files = await fetch(API+'/api/files').then(r=>r.json());
+  document.getElementById('filesTable').innerHTML = files.map(f => `
+    <tr>
+      <td>#${f.id}</td>
+      <td class="filename">${f.file_name}</td>
+      <td class="mono">${shortHash(f.file_hash)}</td>
+      <td class="mono">${shortHash(f.merkle_root)}</td>
+      <td>${fmtDate(f.uploaded_at)}</td>
+      <td><span class="badge ${f.status}">${f.status}</span></td>
+      <td>
+        ${f.status === 'tampered' ? `<button onclick="restoreFile(${f.id})" style="background:transparent; color:var(--primary); border:1px solid var(--primary); padding:4px 8px; border-radius:4px; font-size:12px; cursor:pointer; margin-right: 4px;">Restore</button>` : ''}
+        <button onclick="deleteFile(${f.id})" style="background:transparent; color:var(--red); border:1px solid var(--red-dim); padding:4px 8px; border-radius:4px; font-size:12px; cursor:pointer;">Delete</button>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:24px">No files registered yet</td></tr>';
+}
+
+// ── Blockchain ──
+async function loadBlockchain() {
+  try {
+    const [health, verifs, files] = await Promise.all([
+      fetch(API+'/api/health').then(r=>r.json()),
+      fetch(API+'/api/verifications').then(r=>r.json()),
+      fetch(API+'/api/files').then(r=>r.json())
+    ]);
+    const bc = health.blockchain;
+    document.getElementById('bcStatusInfo').innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+        <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px">
+          <div style="color:var(--text3);font-size:10px;text-transform:uppercase;margin-bottom:6px">Mode</div>
+          <div style="font-weight:600;color:var(--accent2)">${bc.mode === 'mock' ? 'Mock (no Ganache)' : 'Ganache'}</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px">
+          <div style="color:var(--text3);font-size:10px;text-transform:uppercase;margin-bottom:6px">Connected</div>
+          <div style="font-weight:600;color:var(--green)">${bc.connected ? 'Yes' : 'No'}</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px">
+          <div style="color:var(--text3);font-size:10px;text-transform:uppercase;margin-bottom:6px">Files on chain</div>
+          <div style="font-weight:600;color:var(--text)">${files.length}</div>
+        </div>
+      </div>`;
+
+    // Chain blocks
+    const blocksDiv = document.getElementById('chainBlocks');
+    const recent = files.slice(-5);
+    blocksDiv.innerHTML = recent.map((f, i) => `
+      <div class="chain-block ${i===recent.length-1?'latest':''}">
+        <div class="chain-block-num">Block #${f.block_id ?? f.id}</div>
+        <div class="chain-block-hash">${shortHash(f.file_hash)}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:3px">${f.file_name.slice(0,14)}</div>
+      </div>
+      ${i < recent.length-1 ? '<div class="chain-arrow">→</div>' : ''}`
+    ).join('') || '<div style="color:var(--text3);font-size:13px">No blocks yet</div>';
+
+    // Verifications
+    document.getElementById('verifTable').innerHTML = verifs.map(v => `
+      <tr>
+        <td>#${v.file_id}</td>
+        <td class="filename">${v.file_name ?? '—'}</td>
+        <td class="mono">${shortHash(v.new_hash)}</td>
+        <td><span class="badge ${v.is_intact ? 'safe' : 'tampered'}">${v.is_intact ? 'Intact' : 'Tampered'}</span></td>
+        <td>${fmtDate(v.verified_at)}</td>
+      </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:24px">No verifications yet</td></tr>';
+  } catch(e) { console.error(e); }
+}
+
+// ── AI ──
+async function loadAI() {
+  const [anomalies, aiStats] = await Promise.all([
+    fetch(API+'/api/anomalies').then(r=>r.json()),
+    fetch(API+'/api/ai/stats').then(r=>r.json())
+  ]);
+  document.getElementById('aiStats').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      ${Object.entries(aiStats).map(([k,v]) => `
+        <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px">
+          <div style="color:var(--text3);font-size:10px;text-transform:uppercase;margin-bottom:4px">${k.replace(/_/g,' ')}</div>
+          <div style="font-size:18px;font-weight:600;color:var(--accent2)">${v}</div>
+        </div>`).join('')}
+    </div>`;
+
+  const listDiv = document.getElementById('anomalyList');
+  listDiv.innerHTML = anomalies.length ? anomalies.map(a => `
+    <div class="alert-item">
+      <div class="alert-severity ${a.severity}">${severityIcon(a.severity)}</div>
+      <div style="flex:1">
+        <div class="alert-msg">${a.message}</div>
+        <div class="alert-meta">${a.anom_type} · Severity: ${a.severity} · ${a.file_name ?? 'system'}</div>
+      </div>
+      <div class="alert-time">${fmtDate(a.detected_at)}</div>
+    </div>`).join('') :
+    '<div style="color:var(--text3);font-size:13px;padding:8px 0">No anomalies detected — system is clean</div>';
+}
+
+// ── Alerts ──
+async function loadAlerts() {
+  const alerts = await fetch(API+'/api/alerts').then(r=>r.json());
+  const listDiv = document.getElementById('alertsList');
+  listDiv.innerHTML = alerts.length ? alerts.map(a => `
+    <div class="alert-item" style="${!a.read ? 'background:var(--accent-dim);margin:-1px;padding:14px;border-radius:var(--radius-sm)' : ''}">
+      <div class="alert-severity ${a.severity}">${severityIcon(a.severity)}</div>
+      <div style="flex:1">
+        <div class="alert-msg">${a.message}</div>
+        <div class="alert-meta">${a.type} · ${a.file_name ?? 'system'}</div>
+      </div>
+      <div class="alert-time">${fmtDate(a.timestamp)}</div>
+    </div>`).join('') :
+    '<div style="color:var(--text3);font-size:13px;padding:8px 0;text-align:center">No alerts</div>';
+  const unread = alerts.filter(a => !a.read).length;
+  const badge = document.getElementById('alertBadge');
+  badge.style.display = unread ? 'flex' : 'none';
+  badge.textContent = unread;
+}
+
+async function markAlertsRead() {
+  await fetch(API+'/api/alerts/read', {method:'POST'});
+  document.getElementById('alertBadge').style.display = 'none';
+  loadAlerts();
+  toast('All alerts marked as read');
+}
+
+// ── Merkle ──
+async function buildMerkle() {
+  const items = document.getElementById('merkleInput').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if (!items.length) { toast('Enter at least one item', 'error'); return; }
+  const res = await fetch(API+'/api/merkle/demo', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({items})
+  });
+  const data = await res.json();
+  document.getElementById('merkleResult').style.display = 'block';
+  document.getElementById('merkleRoot').textContent = data.merkle_root;
+
+  // Render tree levels
+  const treeDiv = document.getElementById('merkleTree');
+  const levels = [...data.tree_structure.levels].reverse();
+  treeDiv.innerHTML = levels.map((level, li) => `
+    <div style="margin-bottom:6px;font-size:10px;color:var(--text3);margin-left:4px">${li===0?'ROOT':li===levels.length-1?'LEAVES':'LEVEL '+li}</div>
+    <div class="merkle-level">
+      ${level.map(h => `<div class="merkle-node ${li===0?'root':li===levels.length-1?'leaf':''}">${h.slice(0,20)}…</div>`).join('')}
+    </div>`).join('');
+
+  // Proof
+  document.getElementById('merkleProof').innerHTML = `
+    <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Proof path for leaf[0]: <code style="color:var(--accent2)">"${items[0]}"</code></div>
+    ${data.proof_for_index_0.map((p,i) => `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;color:var(--text3)">${p.position}</div>
+        <div class="hash-display" style="flex:1;margin:0">${p.hash}</div>
+      </div>`).join('')}
+    <div style="margin-top:12px;font-size:13px;color:${data.proof_valid?'var(--green)':'var(--red)'};font-weight:600">
+      ${data.proof_valid ? '✅ Proof valid — leaf is in the tree' : '❌ Proof invalid'}
+    </div>`;
+}
+
+// ── Drag & drop ──
+['uploadZone','verifyZone'].forEach(id => {
+  const zone = document.getElementById(id);
+  if (!zone) return;
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag');
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    if (id === 'uploadZone') {
+      selectedFile = file;
+      document.getElementById('prevName').textContent = file.name;
+      document.getElementById('prevMeta').textContent = fmtSize(file.size);
+      document.getElementById('uploadPreview').style.display = 'block';
+    } else {
+      verifyFile = file;
+      document.getElementById('verifyPrevName').textContent = file.name;
+      document.getElementById('verifyPrevMeta').textContent = fmtSize(file.size);
+      document.getElementById('verifyFilePreview').style.display = 'block';
+    }
+  });
+});
+
+function severityIcon(s) {
+  return {CRITICAL:'🚨',HIGH:'🔴',MEDIUM:'⚠️',LOW:'ℹ️'}[s] ?? '•';
+}
+
+// ── Init ──
+function pollData() {
+  loadDashboard();
+  loadChainStatus();
+  if (document.getElementById('page-files').classList.contains('active')) loadFiles();
+  if (document.getElementById('page-ai').classList.contains('active')) loadAI();
+  if (document.getElementById('page-blockchain').classList.contains('active')) loadBlockchain();
+  if (document.getElementById('page-alerts').classList.contains('active')) loadAlerts();
+}
+
+pollData();
+setInterval(pollData, 5000);
+
+async function restoreFile(id) {
+  const emailVal = prompt("Enter your authorized uploader email (leave blank if Admin):");
+  if (emailVal === null) return; // user cancelled
+  
+  if (!confirm("Are you sure you want to forcibly restore this file from the AES backup? Live data will be overwritten.")) return;
+  try {
+    const res = await fetch(API+'/api/files/restore/'+id, {
+      method:'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: emailVal })
+    });
+    const data = await res.json();
+    if (data.success) { toast('File restored successfully!'); loadFiles(); }
+    else throw new Error(data.error);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function deleteFile(id) {
+  if (!confirm("Are you sure you want to permanently delete this file?")) return;
+  try {
+    const res = await fetch(API+'/api/files/'+id, {method:'DELETE'});
+    if (res.ok) {
+      toast("File successfully deleted");
+      pollData();
+    } else alert("Failed to delete file");
+  } catch(err) {
+    alert("Error: " + err);
+  }
+}
+
+// Poll alert badge
+setInterval(async () => {
+  const alerts = await fetch(API+'/api/alerts').then(r=>r.json()).catch(()=>[]);
+  const unread = alerts.filter(a=>!a.read).length;
+  const badge = document.getElementById('alertBadge');
+  badge.style.display = unread ? 'flex' : 'none';
+  badge.textContent = unread;
+}, 10000);
+</script>
+</body>
+</html>

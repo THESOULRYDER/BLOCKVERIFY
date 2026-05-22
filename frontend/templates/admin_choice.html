@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Portal Select - BlockVerify</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #09090E;
+      --surface: #12121A;
+      --border: rgba(124,107,255,.15);
+      --accent: #7C6BFF;
+      --accent2: #AFA9EC;
+      --text: #E8E6FF;
+      --text2: #8A87B0;
+      --radius: 12px;
+      --font: 'Space Grotesk', sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; display: flex; align-items: center; justify-content: center; }
+
+    .choice-container {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 40px; width: 100%; max-width: 480px; text-align: center;
+    }
+    .logo-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .page-title { font-size: 24px; font-weight: 600; margin-bottom: 10px; }
+    .page-sub { font-size: 14px; color: var(--text2); margin-bottom: 40px; line-height: 1.5; }
+
+    .btn {
+      width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+      font-size: 15px; font-weight: 600; padding: 14px 20px; margin-bottom: 16px;
+      border-radius: 8px; cursor: pointer; text-decoration: none; transition: all .2s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; border: none; }
+    .btn-primary:hover { background: #9D8FFF; }
+    
+    .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .btn-outline:hover { background: rgba(124,107,255,.12); border-color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="choice-container">
+    <div class="logo-icon">
+      <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
+        <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="page-title">Welcome, Admin</div>
+    <div class="page-sub">You have elevated permissions. Where would you like to go today?</div>
+
+    <a href="/dashboard" class="btn btn-primary">Go to Admin Dashboard</a>
+    <a href="/" class="btn btn-outline">Go to Public App & File Uploads</a>
+  </div>
+</body>
+</html>

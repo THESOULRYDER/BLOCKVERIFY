@@ -1,0 +1,54 @@
+# ── Environment & Secrets ─────────────────────
+.env
+*.key
+*.pem
+
+# ── Python ────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+venv/
+env/
+.venv/
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ── Database (contains user data) ────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Runtime / Generated files ─────────────────
+uploads/*
+!uploads/.gitkeep
+backups/*
+!backups/.gitkeep
+alerts.json
+anomaly_log.json
+server_logs.txt
+install_out.txt
+trace_dump.txt
+
+# ── Encrypted backups ─────────────────────────
+*.enc
+
+# ── Test scratch files ─────────────────────────
+test_autocorrect.txt
+test_upload.txt
+tempCodeRunnerFile.py
+
+# ── IDE & OS ──────────────────────────────────
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Node (if used for Truffle/Ganache) ────────
+node_modules/
+npm-debug.log

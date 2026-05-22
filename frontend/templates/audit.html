@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BlockVerify — File Audit Trail</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#09090E; --surface:#12121A; --surface2:#1A1A26;
+      --border:rgba(124,107,255,.15); --border2:rgba(124,107,255,.3);
+      --accent:#7C6BFF; --accent2:#AFA9EC; --accent-dim:rgba(124,107,255,.12);
+      --text:#E8E6FF; --text2:#8A87B0; --text3:#4A476A;
+      --green:#22D67A; --green-dim:rgba(34,214,122,.12);
+      --red:#FF4E6A; --red-dim:rgba(255,78,106,.12);
+      --amber:#FFB547; --amber-dim:rgba(255,181,71,.12);
+      --r:12px; --rs:8px; --font:'Space Grotesk',sans-serif; --mono:'DM Mono',monospace;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;min-height:100vh}
+    a{color:var(--accent2);text-decoration:none}
+    a:hover{text-decoration:underline}
+
+    .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;gap:16px}
+    .back-btn{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer;border:1px solid var(--border2);background:transparent;border-radius:var(--rs);padding:6px 12px;font-family:var(--font);transition:all .15s}
+    .back-btn:hover{background:var(--accent-dim);color:var(--text)}
+    .topbar-title{font-size:15px;font-weight:600}
+    .topbar-sub{font-size:12px;color:var(--text2);margin-left:auto}
+
+    .page{max-width:960px;margin:0 auto;padding:32px}
+
+    .status-hero{border-radius:var(--r);padding:24px 28px;margin-bottom:28px;display:flex;align-items:center;gap:20px}
+    .status-hero.safe{background:var(--green-dim);border:1px solid rgba(34,214,122,.25)}
+    .status-hero.tampered{background:var(--red-dim);border:1px solid rgba(255,78,106,.25)}
+    .status-hero.pending{background:var(--amber-dim);border:1px solid rgba(255,181,71,.25)}
+    .hero-icon{font-size:36px;line-height:1}
+    .hero-name{font-size:18px;font-weight:600;margin-bottom:4px}
+    .hero-sub{font-size:13px;color:var(--text2)}
+    .hero-badge{margin-left:auto;font-size:12px;font-weight:600;padding:5px 14px;border-radius:20px}
+    .hero-badge.safe{background:var(--green-dim);color:var(--green);border:1px solid rgba(34,214,122,.3)}
+    .hero-badge.tampered{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,78,106,.3)}
+    .hero-badge.pending{background:var(--amber-dim);color:var(--amber);border:1px solid rgba(255,181,71,.3)}
+
+    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+    .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px}
+    .stat-label{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
+    .stat-val{font-size:20px;font-weight:600;color:var(--text)}
+    .stat-sub{font-size:11px;color:var(--text2);margin-top:4px}
+
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:20px}
+    .card-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+    .card-title .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+
+    .hash-block{background:var(--surface2);border:1px solid var(--border);border-radius:var(--rs);padding:12px 16px;font-family:var(--mono);font-size:12px;color:var(--accent2);word-break:break-all;position:relative}
+    .copy-btn{position:absolute;top:8px;right:10px;background:var(--accent-dim);border:none;border-radius:6px;padding:4px 8px;font-size:10px;color:var(--accent2);cursor:pointer;font-family:var(--font)}
+    .copy-btn:hover{background:var(--border2)}
+
+    /* Timeline */
+    .timeline{position:relative;padding-left:24px}
+    .timeline::before{content:'';position:absolute;left:7px;top:8px;bottom:8px;width:1px;background:var(--border)}
+    .tl-item{position:relative;margin-bottom:20px}
+    .tl-dot{position:absolute;left:-24px;top:4px;width:14px;height:14px;border-radius:50%;border:2px solid;display:flex;align-items:center;justify-content:center;background:var(--surface)}
+    .tl-dot.upload{border-color:var(--accent);background:var(--accent-dim)}
+    .tl-dot.safe{border-color:var(--green);background:var(--green-dim)}
+    .tl-dot.tampered{border-color:var(--red);background:var(--red-dim)}
+    .tl-dot.alert{border-color:var(--amber);background:var(--amber-dim)}
+    .tl-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:3px}
+    .tl-meta{font-size:11px;color:var(--text2)}
+    .tl-hash{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:4px}
+
+    /* Merkle */
+    .merkle-level{display:flex;justify-content:center;gap:8px;margin-bottom:8px}
+    .merkle-node{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-family:var(--mono);font-size:10px;color:var(--accent2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:all .2s;cursor:default}
+    .merkle-node:hover{border-color:var(--accent);background:var(--accent-dim)}
+    .merkle-node.root{border-color:var(--accent);color:var(--accent);font-weight:500}
+    .merkle-level-label{text-align:center;font-size:10px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em}
+
+    /* Blockchain card */
+    .bc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;font-size:13px}
+    .bc-row label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px}
+
+    .empty{color:var(--text3);font-size:13px;padding:12px 0;text-align:center}
+
+    .proof-step{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+    .proof-dir{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:11px;color:var(--text3);min-width:44px;text-align:center}
+
+    @media(max-width:700px){.grid3{grid-template-columns:1fr 1fr}.bc-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" onclick="window.history.back()">
+    <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Back
+  </button>
+  <div class="topbar-title">File Audit Trail</div>
+  <div class="topbar-sub" id="breadcrumb">—</div>
+</div>
+
+<div class="page">
+  <div id="loading" style="text-align:center;padding:60px 0;color:var(--text2)">Loading file record…</div>
+  <div id="content" style="display:none"></div>
+</div>
+
+<script>
+const API = '';
+
+function shortHash(h, n=14) {
+  return h && h.length > n+8 ? h.slice(0,n)+'…'+h.slice(-6) : (h||'—');
+}
+function fmtDate(s) {
+  if (!s) return '—';
+  const d = new Date(s.endsWith('Z') ? s : s + 'Z');
+  return d.toLocaleString(undefined, {dateStyle:'medium', timeStyle:'short'});
+}
+function fmtSize(b) {
+  if (!b) return '—';
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+
+async function load() {
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id');
+  if (!id) { document.getElementById('loading').textContent = 'No file ID specified. Add ?id=1 to URL.'; return; }
+
+  try {
+    const [fileData, allFiles] = await Promise.all([
+      fetch(API + '/api/files/' + id).then(r => r.json()),
+      fetch(API + '/api/files').then(r => r.json()),
+    ]);
+
+    if (fileData.error) { document.getElementById('loading').textContent = 'File not found: ' + fileData.error; return; }
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    document.getElementById('breadcrumb').textContent = '#' + id + ' — ' + fileData.file_name;
+    document.title = 'Audit — ' + fileData.file_name;
+
+    render(fileData, allFiles);
+  } catch(e) {
+    document.getElementById('loading').textContent = 'Could not connect to server. Make sure Flask is running on :5000.';
+  }
+}
+
+function render(f, allFiles) {
+  const verifs = f.verifications || [];
+  const s = f.status;
+  const icon = s === 'safe' ? '🔒' : s === 'tampered' ? '🚨' : '⏳';
+
+  // Build Merkle demo tree
+  const idx = allFiles.findIndex(x => x.id === f.id);
+  const nearbyHashes = allFiles.slice(Math.max(0,idx-1), idx+3).map(x => x.file_hash);
+  const merkleHTML = buildMerkleHTML(nearbyHashes, f.file_hash);
+
+  // Build proof steps HTML
+  // Simulate a 3-step proof
+  const proofSteps = [
+    { dir: 'right', hash: f.merkle_root ? f.merkle_root.slice(0,40)+'…' : '—' },
+    { dir: 'left',  hash: f.file_hash   ? f.file_hash.slice(32,64)       : '—' },
+  ];
+
+  document.getElementById('content').innerHTML = `
+    <div class="status-hero ${s}">
+      <div class="hero-icon">${icon}</div>
+      <div>
+        <div class="hero-name">${f.file_name}</div>
+        <div class="hero-sub">ID #${f.id} · ${fmtSize(f.file_size)} · Registered ${fmtDate(f.uploaded_at)}</div>
+      </div>
+      <div class="hero-badge ${s}">${s.toUpperCase()}</div>
+    </div>
+
+    <div class="grid3">
+      <div class="stat-card">
+        <div class="stat-label">Total Verifications</div>
+        <div class="stat-val">${verifs.length}</div>
+        <div class="stat-sub">Times checked</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Passed</div>
+        <div class="stat-val" style="color:var(--green)">${verifs.filter(v=>v.is_intact).length}</div>
+        <div class="stat-sub">Integrity confirmed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Failed</div>
+        <div class="stat-val" style="color:var(--red)">${verifs.filter(v=>!v.is_intact).length}</div>
+        <div class="stat-sub">Tamper detected</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><div class="dot"></div>Cryptographic Hashes</div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">SHA-256 File Hash</div>
+        <div class="hash-block">${f.file_hash || '—'}
+          <button class="copy-btn" onclick="copyHash('${f.file_hash}', this)">Copy</button>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">Merkle Root</div>
+        <div class="hash-block">${f.merkle_root || '—'}
+          <button class="copy-btn" onclick="copyHash('${f.merkle_root}', this)">Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><div class="dot"></div>Blockchain Record</div>
+      <div class="bc-grid">
+        <div><label>Chain Mode</label><span style="font-weight:500">${f.chain_mode || 'mock'}</span></div>
+        <div><label>Block ID</label><span style="font-weight:500">${f.block_id || '—'}</span></div>
+        <div style="grid-column:1/-1"><label>Transaction Hash</label>
+          <div class="hash-block" style="font-size:11px">${f.tx_hash || '—'}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><div class="dot"></div>Merkle Tree Context</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:16px">
+        Showing nearby files in the Merkle tree. The highlighted node is this file.
+        Any change to this file would change every node up to the root.
+      </p>
+      ${merkleHTML}
+    </div>
+
+    <div class="card">
+      <div class="card-title"><div class="dot"></div>Merkle Proof Path</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:14px">
+        This proof allows verifying this file's membership in the tree without re-hashing all files.
+      </p>
+      <div style="margin-bottom:10px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Leaf hash</div>
+        <div class="hash-block" style="font-size:11px;color:var(--green)">${f.file_hash || '—'}</div>
+      </div>
+      ${proofSteps.map((p,i) => `
+        <div class="proof-step">
+          <div style="font-size:11px;color:var(--text3);min-width:30px">#${i+1}</div>
+          <div class="proof-dir">${p.dir}</div>
+          <div class="hash-block" style="flex:1;margin:0;font-size:10px">${p.hash}</div>
+        </div>`).join('')}
+      <div style="margin-top:10px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Result = Merkle Root</div>
+        <div class="hash-block" style="font-size:11px;color:var(--accent)">${f.merkle_root || '—'}</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><div class="dot"></div>Verification Timeline</div>
+      ${verifs.length === 0
+        ? '<div class="empty">No verifications yet — upload the file in the Verify tab to check it.</div>'
+        : buildTimeline(f, verifs)}
+    </div>
+  `;
+}
+
+function buildMerkleHTML(hashes, highlighted) {
+  if (!hashes.length) return '<div class="empty">No nearby files</div>';
+
+  // Build a simple 2-level visual
+  const pairs = [];
+  for (let i = 0; i < hashes.length; i += 2) {
+    const a = hashes[i], b = hashes[i+1] || hashes[i];
+    pairs.push(sha256sim(a + b));
+  }
+  const root = sha256sim(pairs.join(''));
+
+  return `
+    <div style="overflow-x:auto">
+      <div class="merkle-level-label">Root</div>
+      <div class="merkle-level">
+        <div class="merkle-node root" title="${root}">${root.slice(0,20)}…</div>
+      </div>
+      <div class="merkle-level-label">Nodes</div>
+      <div class="merkle-level">
+        ${pairs.map(p => `<div class="merkle-node" title="${p}">${p.slice(0,16)}…</div>`).join('')}
+      </div>
+      <div class="merkle-level-label">Leaves (files)</div>
+      <div class="merkle-level">
+        ${hashes.map(h => `<div class="merkle-node${h===highlighted?' root':''}" title="${h}">${h.slice(0,16)}…</div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function buildTimeline(file, verifs) {
+  let html = '<div class="timeline">';
+
+  // Registration event
+  html += `
+    <div class="tl-item">
+      <div class="tl-dot upload"></div>
+      <div class="tl-title">File registered</div>
+      <div class="tl-meta">${fmtDate(file.uploaded_at)} · Chain mode: ${file.chain_mode}</div>
+      <div class="tl-hash">${shortHash(file.file_hash)}</div>
+    </div>`;
+
+  // Verification events
+  for (const v of [...verifs].reverse()) {
+    const cls = v.is_intact ? 'safe' : 'tampered';
+    const label = v.is_intact ? 'Verification passed — intact' : 'Verification FAILED — tampered!';
+    html += `
+      <div class="tl-item">
+        <div class="tl-dot ${cls}"></div>
+        <div class="tl-title">${label}</div>
+        <div class="tl-meta">${fmtDate(v.verified_at)}</div>
+        <div class="tl-hash">checked hash: ${shortHash(v.new_hash)}</div>
+      </div>`;
+  }
+
+  html += '</div>';
+  return html;
+}
+
+// Simple deterministic string hash (for demo Merkle visualization only)
+function sha256sim(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;
+  }
+  // Stretch to 64 chars
+  let r = h.toString(16).padStart(8,'0');
+  while (r.length < 64) r += (h ^ r.length).toString(16).padStart(8,'0');
+  return r.slice(0,64);
+}
+
+function copyHash(h, btn) {
+  if (!h) return;
+  navigator.clipboard.writeText(h).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  });
+}
+
+load();
+</script>
+</body>
+</html>

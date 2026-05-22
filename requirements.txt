@@ -1,0 +1,16 @@
+flask>=3.0.0
+flask-cors>=4.0.0
+werkzeug>=3.0.0
+
+# Blockchain
+web3>=6.0.0
+
+# AI / ML
+scikit-learn>=1.3.0
+numpy>=1.24.0
+
+# Optional: for Ganache interaction
+py-solc-x>=1.1.1
+
+# AES Encryption
+cryptography>=41.0.0

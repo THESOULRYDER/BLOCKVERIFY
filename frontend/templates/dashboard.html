@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - BlockVerify</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #09090E;
+      --surface: #12121A;
+      --surface2: #1A1A26;
+      --border: rgba(124,107,255,.15);
+      --border2: rgba(124,107,255,.3);
+      --accent: #7C6BFF;
+      --accent2: #AFA9EC;
+      --accent-dim: rgba(124,107,255,.12);
+      --text: #E8E6FF;
+      --text2: #8A87B0;
+      --text3: #4A476A;
+      --red: #FF4E6A;
+      --red-dim: rgba(255,78,106,.12);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font: 'Space Grotesk', sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; }
+    
+    .header { padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: var(--surface); }
+    .logo-mark { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; color: var(--text); }
+    .logo-icon { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: flex; align-items: center; justify-content: center; }
+    
+    .nav-actions { display: flex; gap: 16px; }
+    .nav-link { color: var(--text2); text-decoration: none; font-size: 14px; font-weight: 500; display: flex; align-items: center; padding: 8px 12px; border-radius: var(--radius-sm); transition: all 0.2s; }
+    .nav-link:hover { color: var(--text); background: var(--surface2); }
+    .btn-logout { background: var(--red-dim); color: var(--red); }
+    .btn-logout:hover { background: var(--red); color: white; }
+
+    .main { padding: 40px; max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+    
+    @media (max-width: 800px) {
+        .main { grid-template-columns: 1fr; }
+    }
+
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+    .card-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+    .card-sub { font-size: 13px; color: var(--text2); margin-bottom: 24px; }
+    
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
+    input[type=text], input[type=password] { width: 100%; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font); font-size: 14px; }
+    input:focus { outline: none; border-color: var(--accent); }
+    
+    .btn { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; padding: 10px 20px; border-radius: var(--radius-sm); cursor: pointer; border: none; font-family: var(--font); transition: all .15s; background: var(--accent); color: #fff; margin-top: 10px; }
+    .btn:hover { background: #9D8FFF; }
+    
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+    th { text-align: left; padding: 0 14px 10px; font-size: 11px; font-weight: 600; letter-spacing: .07em; color: var(--text3); text-transform: uppercase; border-bottom: 1px solid var(--border); }
+    td { padding: 16px 14px; border-bottom: 1px solid var(--border); color: var(--text); }
+    tr:last-child td { border-bottom: none; }
+    .table-wrap { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px 0; }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="logo-mark">
+      <div class="logo-icon">
+        <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+          <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      BlockVerify Admin
+    </div>
+    <div class="nav-actions">
+      <a href="/" class="nav-link">Go to Main App</a>
+      <a href="/logout" class="nav-link btn-logout">Logout</a>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="card">
+      <div class="card-title">Create New User</div>
+      <div class="card-sub">Add additional administrator accounts to the system.</div>
+      
+      <form action="/api/users/add" method="POST">
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" name="username" required autocomplete="new-username" placeholder="Enter username">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" name="password" required autocomplete="new-password" placeholder="Enter strong password">
+        </div>
+        <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" name="is_admin" id="is_admin" style="width: auto;">
+          <label for="is_admin" style="margin: 0; display: inline; cursor: pointer;">Grants Admin Dashboard Access</label>
+        </div>
+        <button type="submit" class="btn">Create Account</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-title">System Administrators</div>
+      <div class="card-sub">List of accounts with access to this dashboard.</div>
+      
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Username</th>
+              <th>Role</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in users %}
+            <tr>
+              <td style="color:var(--text3)">#{{ u.id }}</td>
+              <td style="font-weight: 500;">{{ u.username }}</td>
+              <td style="color:var(--text2)">{{ 'Admin' if u.is_admin else 'User' }}</td>
+              <td>
+                <button onclick="editUser({{ u.id }}, {{ 'true' if u.is_admin else 'false' }})" style="background:var(--accent-dim);color:var(--accent);border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;margin-right:5px;">Edit</button>
+                <button onclick="deleteUser({{ u.id }})" style="background:var(--red-dim);color:var(--red);border:none;padding:5px 10px;border-radius:4px;cursor:pointer;font-size:12px;">Delete</button>
+              </td>
+            </tr>
+            {% endfor %}
+            {% if not users %}
+            <tr><td colspan="4" style="text-align: center; color: var(--text3);">No users found.</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <div class="main" id="editContainer" style="display:none; padding-top:0;">
+    <div class="card" style="grid-column: 1 / -1;">
+      <div class="card-title">Edit User #<span id="editUserNum"></span></div>
+      <div class="card-sub">Modify password or administrative privileges.</div>
+      
+      <form action="/api/users/edit" method="POST">
+        <input type="hidden" name="user_id" id="edit_user_id">
+        <div class="form-group">
+          <label>New Password (leave empty to keep current password)</label>
+          <input type="password" name="password" autocomplete="new-password" placeholder="Enter new password">
+        </div>
+        <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" name="is_admin" id="edit_is_admin" style="width: auto;">
+          <label for="edit_is_admin" style="margin: 0; display: inline; cursor: pointer;">User is Administrator</label>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button type="submit" class="btn">Save Changes</button>
+          <button type="button" class="btn" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);" onclick="document.getElementById('editContainer').style.display='none'">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  
+  <script>
+    function editUser(id, isAdmin) {
+        document.getElementById('editContainer').style.display = 'grid';
+        document.getElementById('edit_user_id').value = id;
+        document.getElementById('editUserNum').innerText = id;
+        document.getElementById('edit_is_admin').checked = isAdmin;
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    async function deleteUser(id) {
+        if (!confirm("Are you sure you want to permanently delete this user?")) return;
+        const res = await fetch('/api/users/' + id, {method: 'DELETE'});
+        if(res.ok) {
+            window.location.reload();
+        } else {
+            alert('Failed to delete user.');
+        }
+    }
+  </script>
+
+</body>
+</html>
