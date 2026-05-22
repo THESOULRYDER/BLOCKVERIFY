@@ -21,6 +21,8 @@ This project was co-created and developed by:
 ## Blockchain-based File Integrity Verification System with AI Monitoring
 
 ---
+<img width="1919" height="974" alt="Screenshot 2026-04-17 111914" src="https://github.com/user-attachments/assets/f873b818-8b2a-49c8-b7b2-599db681a402" />
+<img width="1919" height="980" alt="Screenshot 2026-04-17 111952" src="https://github.com/user-attachments/assets/d4a282a2-3d70-4b1c-8048-e74fcc781ea9" />
 
 ## Project Structure
 
