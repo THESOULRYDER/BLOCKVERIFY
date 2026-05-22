@@ -1,4 +1,23 @@
-# BlockVerify
+<div align="center">
+
+# 🛡️ BlockVerify
+**Blockchain-based File Integrity Verification System with AI Monitoring**
+
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Flask](https://img.shields.io/badge/flask-%23000.svg?style=flat&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![Solidity](https://img.shields.io/badge/Solidity-%23363636.svg?style=flat&logo=solidity&logoColor=white)](https://soliditylang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+</div>
+
+---
+
+## 👥 Authors / Co-Creators
+This project was co-created and developed by:
+* **AJOI T VARGHESE** - [THESOULRYDER](https://github.com/THESOULRYDER)
+* **PRAKASH M** - [RED-ARTIST](https://github.com/RED-ARTIST)
+
+
 ## Blockchain-based File Integrity Verification System with AI Monitoring
 
 ---
